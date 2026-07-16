@@ -394,7 +394,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Contributions are accepted pursuant to a
 
 ## Maintenance
 
-- **Maintainer:** Daniel Dahlin (daniel.dahlin@databricks.com).
+- **Maintainer:** Daniel Dahlin ([@danielvelasquez123-dbx](https://github.com/danielvelasquez123-dbx)).
 - **Support:** please open a [GitHub Issue](../../issues) for bugs, questions, or
   enhancement requests. Issues are triaged by the maintainer.
 - **Validation cadence:** the end-to-end deploy (bundle deploy, pipelines, apps,
