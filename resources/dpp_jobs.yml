@@ -1,0 +1,78 @@
+resources:
+  jobs:
+    synthetic_data_setup:
+      name: "DPP - Synthetic Data Setup"
+      description: >
+        One-time setup job that generates synthetic DPP data and seeds it
+        into the Lakebase PostgreSQL database. Run this before starting
+        the ingestion pipeline.
+      tags:
+        project: dpp-solution-accelerator
+        module: foundation
+      tasks:
+        # Single task: apply schema + generate in-memory + seed. One process
+        # because serverless tasks don't share a local filesystem (so a
+        # generate->JSON->seed hand-off across tasks can't work).
+        - task_key: setup_lakebase
+          description: "Apply schema, generate synthetic data, and seed Lakebase. Self-authenticates via runtime OAuth."
+          spark_python_task:
+            python_file: ../src/foundation/00_setup_lakebase.py
+            parameters:
+              - "--instance"
+              - "${var.lakebase_instance_name}"
+              - "--database"
+              - "${var.lakebase_database}"
+              - "--profile"
+              - "${var.profile}"
+          environment_key: dpp_default
+
+      environments:
+        - environment_key: dpp_default
+          spec:
+            client: "1"
+            dependencies:
+              - "faker==28.4.1"
+              - "asyncpg==0.30.0"
+      schedule:
+        # No schedule -- this is a one-time setup job
+        pause_status: "PAUSED"
+        quartz_cron_expression: "0 0 0 1 1 ? 2099"
+        timezone_id: "Europe/Stockholm"
+
+    precompute_insights:
+      name: "DPP - Pre-compute AI Insights"
+      description: >
+        Nightly job: runs ai_query over the Gold layer to generate AI passport
+        insights, writes them to the gold.dpp_passport_insights Delta table, and
+        upserts a JSON copy into the Lakebase dpp.passport_insights serving table
+        so the Passport Viewer serves cached insights (no live FM call per view).
+        Run after the ingestion pipeline. Paused by default.
+      tags:
+        project: dpp-solution-accelerator
+        module: gold
+      tasks:
+        - task_key: precompute_insights
+          description: "ai_query over Gold + upsert Lakebase serving table"
+          spark_python_task:
+            python_file: ../src/pipelines/gold/precompute_insights.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
+              - "--schema"
+              - "${var.schema}"
+              - "--instance"
+              - "${var.lakebase_instance_name}"
+              - "--database"
+              - "${var.lakebase_database}"
+          environment_key: dpp_insights
+      environments:
+        - environment_key: dpp_insights
+          spec:
+            client: "1"
+            dependencies:
+              - "asyncpg==0.30.0"
+      schedule:
+        # 02:00 daily; paused by default -- unpause or run on demand.
+        pause_status: "PAUSED"
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: "Europe/Stockholm"

@@ -1,0 +1,50 @@
+command:
+  - uvicorn
+  - main:app
+  - --host
+  - 0.0.0.0
+  - --port
+  - "8000"
+
+# ---------------------------------------------------------------------------
+# Lakebase access — RESOURCE BINDING (no secret required)
+# ---------------------------------------------------------------------------
+# Bind the Lakebase database instance as an app RESOURCE (once, at app create):
+#   - Apps UI: Edit > Resources > add "Database" > instance `dpp-passport`,
+#     database `databricks_postgres`, permission "Can connect and create".
+#   - or via the bundle: see resources/apps.yml (one `bundle deploy`).
+# Databricks then auto-injects PGHOST / PGPORT / PGDATABASE / PGUSER, bound to
+# THIS app's service-principal Postgres role; the app mints a short-lived
+# OAuth token for the password — correct DNS, no secret scope, no
+# hand-created PG user.
+#
+# No manual grant is needed for the demo: the schema DDL grants to PUBLIC.
+# For production, scope least-privilege grants to the injected PGUSER instead.
+#
+# Native-login fallback (local dev, or no resource binding): set LAKEBASE_USER
+# + a LAKEBASE_PASSWORD secret and the app resolves DNS from LAKEBASE_INSTANCE.
+# See README "Fallback: PG native login". Not enabled here so a clean deploy
+# never depends on a secret scope existing.
+env:
+  # Used only by the native-login fallback to resolve DNS; harmless otherwise.
+  # NOTE: DABs does not substitute ${var.*} in app.yaml — if you deploy with
+  # a custom --var="lakebase_instance_name=..." or lakebase_database, edit
+  # these two values to match.
+  - name: LAKEBASE_INSTANCE
+    value: dpp-passport
+  - name: LAKEBASE_DATABASE_NAME
+    value: databricks_postgres
+
+  # Lakebase schema the operational tables live under.
+  - name: DPP_SCHEMA
+    value: dpp
+
+  # Foundation Model API endpoint name. Override to pin a different model.
+  - name: AI_MODEL
+    value: databricks-meta-llama-3-3-70b-instruct
+
+  # Opt-in usage tracking: log who opens the app to dpp.app_access_log
+  # (identity from the Databricks Apps SSO X-Forwarded-* headers). This is
+  # personal data (GDPR) -- leave "false" unless you need internal tracking.
+  - name: ACCESS_LOG_ENABLED
+    value: "false"

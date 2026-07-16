@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Audit Log - {{ supplier.name }}{% endblock %}
+
+{% block content %}
+{# ── Back link ── #}
+<div class="mb-4">
+    <a href="/supplier/{{ supplier.supplier_id }}"
+       class="inline-flex items-center gap-1 text-sm text-sp-700 hover:text-sp-800 font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to {{ supplier.name }}
+    </a>
+</div>
+
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">Audit Log</h1>
+    <p class="text-gray-500 text-sm">
+        All changes to products linked to <strong>{{ supplier.name }}</strong>.
+        Audit entries are captured automatically by Lakebase triggers on every INSERT, UPDATE, and DELETE.
+    </p>
+</div>
+
+{# ── Table filter ── #}
+{% if table_names %}
+<form method="get" action="/supplier/{{ supplier.supplier_id }}/audit" class="mb-4 flex items-center gap-3">
+    <label for="table_filter" class="text-sm text-gray-600">Filter by table:</label>
+    <select name="table_filter" id="table_filter"
+            onchange="this.form.submit()"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sp-500 focus:border-transparent">
+        <option value="">All tables</option>
+        {% for tn in table_names %}
+        <option value="{{ tn }}" {% if table_filter == tn %}selected{% endif %}>{{ tn }}</option>
+        {% endfor %}
+    </select>
+    {% if table_filter %}
+    <a href="/supplier/{{ supplier.supplier_id }}/audit"
+       class="text-xs text-sp-700 hover:text-sp-800 font-medium">Clear filter</a>
+    {% endif %}
+</form>
+{% endif %}
+
+{# ── Audit table ── #}
+{% if audit_entries %}
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+            <tr>
+                <th class="text-left px-4 py-3">Timestamp</th>
+                <th class="text-left px-4 py-3">Table</th>
+                <th class="text-center px-4 py-3">Action</th>
+                <th class="text-left px-4 py-3">Changed By</th>
+                <th class="text-left px-4 py-3">Old Values</th>
+                <th class="text-left px-4 py-3">New Values</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for entry in audit_entries %}
+            <tr class="row-hover align-top">
+                <td class="px-4 py-3 text-gray-600 font-mono text-xs whitespace-nowrap">
+                    {{ entry.changed_at.strftime('%Y-%m-%d %H:%M:%S') if entry.changed_at else '-' }}
+                </td>
+                <td class="px-4 py-3">
+                    <span class="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-mono">
+                        {{ entry.table_name }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
+                        {% if entry.action == 'INSERT' %}bg-green-100 text-green-700
+                        {% elif entry.action == 'UPDATE' %}bg-blue-100 text-blue-700
+                        {% elif entry.action == 'DELETE' %}bg-red-100 text-red-700
+                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                        {{ entry.action }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                    {{ entry.changed_by or 'system' }}
+                </td>
+                <td class="px-4 py-3">
+                    {% if entry.old_values %}
+                    <details class="cursor-pointer">
+                        <summary class="text-xs text-gray-500 hover:text-gray-700">Show values</summary>
+                        <pre class="mt-1 text-xs text-gray-600 bg-gray-50 rounded p-2 overflow-x-auto max-w-xs">{{ entry.old_values | format_jsonb }}</pre>
+                    </details>
+                    {% else %}
+                    <span class="text-gray-400 text-xs">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    {% if entry.new_values %}
+                    <details class="cursor-pointer">
+                        <summary class="text-xs text-gray-500 hover:text-gray-700">Show values</summary>
+                        <pre class="mt-1 text-xs text-gray-600 bg-gray-50 rounded p-2 overflow-x-auto max-w-xs">{{ entry.new_values | format_jsonb }}</pre>
+                    </details>
+                    {% else %}
+                    <span class="text-gray-400 text-xs">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p class="text-xs text-gray-400 mt-4 text-center">
+    Showing {{ audit_entries | length }} entries (max 100)
+</p>
+{% else %}
+<div class="text-center py-12 text-gray-400">
+    <p class="text-lg mb-1">No audit entries found</p>
+    <p class="text-sm">
+        {% if table_filter %}
+        No entries for table "{{ table_filter }}". Try clearing the filter.
+        {% else %}
+        No changes have been recorded for this supplier's products yet.
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+{% endblock %}

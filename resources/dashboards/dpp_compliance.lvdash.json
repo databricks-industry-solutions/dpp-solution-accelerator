@@ -1,0 +1,1864 @@
+{
+  "datasets": [
+    {
+      "name": "ds_portfolio_counters",
+      "displayName": "Portfolio Counters",
+      "queryLines": [
+        "SELECT COUNT(*) as total_products, ROUND(100.0 * SUM(CASE WHEN is_complete THEN 1 ELSE 0 END) / COUNT(*), 1) as complete_pct, ROUND(AVG(repairability_score), 1) as avg_repairability FROM dpp_dev.dpp.gold_passport_complete"
+      ]
+    },
+    {
+      "name": "ds_passport_status",
+      "displayName": "Passport Status Distribution",
+      "queryLines": [
+        "SELECT passport_status, COUNT(*) as count FROM dpp_dev.dpp.gold_passport_complete GROUP BY passport_status ORDER BY count DESC"
+      ]
+    },
+    {
+      "name": "ds_products_by_category",
+      "displayName": "Products by Category",
+      "queryLines": [
+        "SELECT product_category, COUNT(*) as product_count FROM dpp_dev.dpp.gold_passport_complete GROUP BY product_category ORDER BY product_count DESC"
+      ]
+    },
+    {
+      "name": "ds_compliance_summary",
+      "displayName": "Compliance Summary",
+      "queryLines": [
+        "SELECT 'Compliant' as status, SUM(compliant_count) as record_count FROM dpp_dev.dpp.gold_passport_complete UNION ALL SELECT 'Pending' as status, SUM(pending_count) as record_count FROM dpp_dev.dpp.gold_passport_complete UNION ALL SELECT 'Non-Compliant' as status, SUM(non_compliant_count) as record_count FROM dpp_dev.dpp.gold_passport_complete"
+      ]
+    },
+    {
+      "name": "ds_risk_counters",
+      "displayName": "Risk Counters",
+      "queryLines": [
+        "SELECT SUM(CASE WHEN risk_category IN ('CRITICAL','HIGH') THEN 1 ELSE 0 END) as products_at_risk, SUM(expired_certificate_count) as expiring_certificates, SUM(CASE WHEN non_compliant_count > 0 THEN 1 ELSE 0 END) as non_compliant_products FROM dpp_dev.dpp.gold_compliance_gap_analysis"
+      ]
+    },
+    {
+      "name": "ds_risk_distribution",
+      "displayName": "Risk Category Distribution",
+      "queryLines": [
+        "SELECT risk_category, COUNT(*) as count FROM dpp_dev.dpp.gold_compliance_gap_analysis GROUP BY risk_category ORDER BY count DESC"
+      ]
+    },
+    {
+      "name": "ds_top_risk_products",
+      "displayName": "Top 10 Highest Risk Products",
+      "queryLines": [
+        "SELECT product_name, product_category, risk_score, risk_category, non_compliant_count, pending_count, expired_certificate_count FROM dpp_dev.dpp.gold_compliance_gap_analysis ORDER BY risk_score DESC LIMIT 10"
+      ]
+    },
+    {
+      "name": "ds_risk_by_category",
+      "displayName": "Risk by Category",
+      "queryLines": [
+        "SELECT product_category, risk_category, COUNT(*) as product_count FROM dpp_dev.dpp.gold_compliance_gap_analysis GROUP BY product_category, risk_category ORDER BY product_category, risk_category"
+      ]
+    },
+    {
+      "name": "ds_env_counters",
+      "displayName": "Environmental Counters",
+      "queryLines": [
+        "SELECT ROUND(SUM(total_carbon_kg), 0) as total_portfolio_carbon, ROUND(SUM(total_energy_kwh) / SUM(product_count), 1) as avg_energy_per_product, ROUND(SUM(total_water_liters), 0) as total_water_usage FROM dpp_dev.dpp.gold_carbon_by_category"
+      ]
+    },
+    {
+      "name": "ds_avg_carbon_by_category",
+      "displayName": "Avg Carbon by Category",
+      "queryLines": [
+        "SELECT product_category, ROUND(avg_carbon_kg, 1) as avg_carbon_kg FROM dpp_dev.dpp.gold_carbon_by_category ORDER BY avg_carbon_kg DESC"
+      ]
+    },
+    {
+      "name": "ds_lifecycle_breakdown",
+      "displayName": "Lifecycle Phase Breakdown",
+      "queryLines": [
+        "SELECT product_category, ROUND(100.0 * total_carbon_manufacturing / (total_carbon_manufacturing + total_carbon_transport + total_carbon_use_phase + total_carbon_end_of_life), 1) as manufacturing_pct, ROUND(100.0 * total_carbon_transport / (total_carbon_manufacturing + total_carbon_transport + total_carbon_use_phase + total_carbon_end_of_life), 1) as transport_pct, ROUND(100.0 * total_carbon_use_phase / (total_carbon_manufacturing + total_carbon_transport + total_carbon_use_phase + total_carbon_end_of_life), 1) as use_phase_pct, ROUND(100.0 * total_carbon_end_of_life / (total_carbon_manufacturing + total_carbon_transport + total_carbon_use_phase + total_carbon_end_of_life), 1) as end_of_life_pct FROM dpp_dev.dpp.gold_carbon_by_category ORDER BY product_category"
+      ]
+    },
+    {
+      "name": "ds_top_carbon_products",
+      "displayName": "Top 10 Highest Carbon Products",
+      "queryLines": [
+        "SELECT product_name, product_category, ROUND(carbon_footprint_kg, 1) as carbon_footprint_kg, ROUND(energy_consumption_kwh, 1) as energy_kwh, ROUND(water_usage_liters, 1) as water_liters, ROUND(manufacturing_pct, 1) as manufacturing_pct, ROUND(renewable_content_pct, 1) as renewable_pct, ROUND(recycled_material_pct, 1) as recycled_pct FROM dpp_dev.dpp.gold_carbon_by_product ORDER BY carbon_footprint_kg DESC LIMIT 10"
+      ]
+    },
+    {
+      "name": "ds_supply_counters",
+      "displayName": "Supply Chain Counters",
+      "queryLines": [
+        "SELECT COUNT(DISTINCT supplier_name) as total_suppliers, COUNT(DISTINCT CASE WHEN risk_level = 'HIGH' THEN supplier_name END) as high_risk_suppliers, SUM(CASE WHEN certification_expiring_soon THEN 1 ELSE 0 END) as expiring_certifications FROM dpp_dev.dpp.gold_supply_chain_lineage"
+      ]
+    },
+    {
+      "name": "ds_suppliers_by_tier",
+      "displayName": "Suppliers by Tier",
+      "queryLines": [
+        "SELECT CONCAT('Tier ', supply_chain_tier) as tier, COUNT(DISTINCT supplier_name) as supplier_count FROM dpp_dev.dpp.gold_supply_chain_lineage GROUP BY supply_chain_tier ORDER BY supply_chain_tier"
+      ]
+    },
+    {
+      "name": "ds_supplier_risk_dist",
+      "displayName": "Supplier Risk Distribution",
+      "queryLines": [
+        "SELECT risk_level, COUNT(DISTINCT supplier_name) as supplier_count FROM dpp_dev.dpp.gold_supply_chain_lineage GROUP BY risk_level ORDER BY supplier_count DESC"
+      ]
+    },
+    {
+      "name": "ds_high_risk_suppliers",
+      "displayName": "High-Risk Supplier Links",
+      "queryLines": [
+        "SELECT supplier_name, supplier_country, supplier_risk_score, product_name, certification, certification_expiry FROM dpp_dev.dpp.gold_supply_chain_lineage WHERE risk_level = 'HIGH' ORDER BY supplier_risk_score DESC LIMIT 15"
+      ]
+    },
+    {
+      "name": "ds_usage_counters",
+      "displayName": "Usage Counters",
+      "queryLines": [
+        "SELECT count(*) AS total_visits, count(DISTINCT user_email) AS unique_users FROM dpp_dev.dpp.gold_app_usage"
+      ]
+    },
+    {
+      "name": "ds_usage_by_user",
+      "displayName": "Usage by User",
+      "queryLines": [
+        "SELECT coalesce(user_email,'(unknown)') AS user_email, count(*) AS visits, count(DISTINCT path) AS pages, max(accessed_at) AS last_seen FROM dpp_dev.dpp.gold_app_usage GROUP BY 1 ORDER BY visits DESC"
+      ]
+    },
+    {
+      "name": "ds_usage_recent",
+      "displayName": "Recent Access",
+      "queryLines": [
+        "SELECT accessed_at, coalesce(user_email,'(unknown)') AS user_email, app_name, method, path FROM dpp_dev.dpp.gold_app_usage ORDER BY accessed_at DESC LIMIT 100"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "portfolio_overview",
+      "displayName": "Portfolio Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "p1-title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## DPP Compliance & Sustainability"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-subtitle",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Digital Product Passport portfolio overview across all product categories"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-total-products",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_portfolio_counters",
+                  "fields": [
+                    {
+                      "name": "total_products",
+                      "expression": "`total_products`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_products",
+                  "displayName": "Total Products"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Products"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-complete-pct",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_portfolio_counters",
+                  "fields": [
+                    {
+                      "name": "complete_pct",
+                      "expression": "`complete_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "complete_pct",
+                  "displayName": "Complete Passports %"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Complete Passports (%)"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-avg-repairability",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_portfolio_counters",
+                  "fields": [
+                    {
+                      "name": "avg_repairability",
+                      "expression": "`avg_repairability`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_repairability",
+                  "displayName": "Avg Repairability Score"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Avg Repairability Score"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-passport-status-pie",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_passport_status",
+                  "fields": [
+                    {
+                      "name": "passport_status",
+                      "expression": "`passport_status`"
+                    },
+                    {
+                      "name": "count",
+                      "expression": "`count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count"
+                },
+                "color": {
+                  "fieldName": "passport_status",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Passport Status"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Passport Status Distribution"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-products-by-category",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_products_by_category",
+                  "fields": [
+                    {
+                      "name": "product_category",
+                      "expression": "`product_category`"
+                    },
+                    {
+                      "name": "product_count",
+                      "expression": "`product_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "product_category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Category"
+                },
+                "y": {
+                  "fieldName": "product_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Product Count"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Products by Category"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p1-compliance-bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_compliance_summary",
+                  "fields": [
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "record_count",
+                      "expression": "`record_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "status",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Compliance Status"
+                },
+                "y": {
+                  "fieldName": "record_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Record Count"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Compliance Summary"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "compliance_risk",
+      "displayName": "Compliance & Risk",
+      "layout": [
+        {
+          "widget": {
+            "name": "p2-title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Compliance & Risk Analysis"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-subtitle",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Risk assessment and compliance gap analysis across the product portfolio"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-products-at-risk",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risk_counters",
+                  "fields": [
+                    {
+                      "name": "products_at_risk",
+                      "expression": "`products_at_risk`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "products_at_risk",
+                  "displayName": "Products at Risk"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Products at Risk (Critical + High)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-expiring-certs",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risk_counters",
+                  "fields": [
+                    {
+                      "name": "expiring_certificates",
+                      "expression": "`expiring_certificates`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "expiring_certificates",
+                  "displayName": "Expiring Certificates"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Expired Certificates"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-non-compliant",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risk_counters",
+                  "fields": [
+                    {
+                      "name": "non_compliant_products",
+                      "expression": "`non_compliant_products`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "non_compliant_products",
+                  "displayName": "Non-Compliant Products"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Non-Compliant Products"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-risk-pie",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risk_distribution",
+                  "fields": [
+                    {
+                      "name": "risk_category",
+                      "expression": "`risk_category`"
+                    },
+                    {
+                      "name": "count",
+                      "expression": "`count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count"
+                },
+                "color": {
+                  "fieldName": "risk_category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Risk Category"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Risk Category Distribution"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-risk-by-category-bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risk_by_category",
+                  "fields": [
+                    {
+                      "name": "product_category",
+                      "expression": "`product_category`"
+                    },
+                    {
+                      "name": "risk_category",
+                      "expression": "`risk_category`"
+                    },
+                    {
+                      "name": "product_count",
+                      "expression": "`product_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "mark": {
+                "layout": "group"
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "product_category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Category"
+                },
+                "y": {
+                  "fieldName": "product_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Product Count"
+                },
+                "color": {
+                  "fieldName": "risk_category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Risk Category"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Risk by Product Category"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-section-header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Top 10 Highest Risk Products"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p2-top-risk-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_top_risk_products",
+                  "fields": [
+                    {
+                      "name": "product_name",
+                      "expression": "`product_name`"
+                    },
+                    {
+                      "name": "product_category",
+                      "expression": "`product_category`"
+                    },
+                    {
+                      "name": "risk_score",
+                      "expression": "`risk_score`"
+                    },
+                    {
+                      "name": "risk_category",
+                      "expression": "`risk_category`"
+                    },
+                    {
+                      "name": "non_compliant_count",
+                      "expression": "`non_compliant_count`"
+                    },
+                    {
+                      "name": "pending_count",
+                      "expression": "`pending_count`"
+                    },
+                    {
+                      "name": "expired_certificate_count",
+                      "expression": "`expired_certificate_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "product_name",
+                    "displayName": "Product"
+                  },
+                  {
+                    "fieldName": "product_category",
+                    "displayName": "Category"
+                  },
+                  {
+                    "fieldName": "risk_score",
+                    "displayName": "Risk Score"
+                  },
+                  {
+                    "fieldName": "risk_category",
+                    "displayName": "Risk Category"
+                  },
+                  {
+                    "fieldName": "non_compliant_count",
+                    "displayName": "Non-Compliant"
+                  },
+                  {
+                    "fieldName": "pending_count",
+                    "displayName": "Pending"
+                  },
+                  {
+                    "fieldName": "expired_certificate_count",
+                    "displayName": "Expired Certs"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 Highest Risk Products"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "environmental_impact",
+      "displayName": "Environmental Impact",
+      "layout": [
+        {
+          "widget": {
+            "name": "p3-title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Environmental Impact"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-subtitle",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Carbon footprint, energy consumption, and water usage across the product portfolio"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-total-carbon",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_env_counters",
+                  "fields": [
+                    {
+                      "name": "total_portfolio_carbon",
+                      "expression": "`total_portfolio_carbon`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_portfolio_carbon",
+                  "displayName": "Total Carbon (kg)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Portfolio Carbon (kg CO2)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-avg-energy",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_env_counters",
+                  "fields": [
+                    {
+                      "name": "avg_energy_per_product",
+                      "expression": "`avg_energy_per_product`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_energy_per_product",
+                  "displayName": "Avg Energy (kWh)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Avg Energy per Product (kWh)"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-total-water",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_env_counters",
+                  "fields": [
+                    {
+                      "name": "total_water_usage",
+                      "expression": "`total_water_usage`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_water_usage",
+                  "displayName": "Total Water (L)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Water Usage (Liters)"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-avg-carbon-bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_avg_carbon_by_category",
+                  "fields": [
+                    {
+                      "name": "product_category",
+                      "expression": "`product_category`"
+                    },
+                    {
+                      "name": "avg_carbon_kg",
+                      "expression": "`avg_carbon_kg`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "product_category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Category"
+                },
+                "y": {
+                  "fieldName": "avg_carbon_kg",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Avg Carbon (kg)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average Carbon Footprint by Category"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-lifecycle-bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_lifecycle_breakdown",
+                  "fields": [
+                    {
+                      "name": "product_category",
+                      "expression": "`product_category`"
+                    },
+                    {
+                      "name": "manufacturing_pct",
+                      "expression": "`manufacturing_pct`"
+                    },
+                    {
+                      "name": "transport_pct",
+                      "expression": "`transport_pct`"
+                    },
+                    {
+                      "name": "use_phase_pct",
+                      "expression": "`use_phase_pct`"
+                    },
+                    {
+                      "name": "end_of_life_pct",
+                      "expression": "`end_of_life_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "product_category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Category"
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "manufacturing_pct",
+                      "displayName": "Manufacturing %"
+                    },
+                    {
+                      "fieldName": "transport_pct",
+                      "displayName": "Transport %"
+                    },
+                    {
+                      "fieldName": "use_phase_pct",
+                      "displayName": "Use Phase %"
+                    },
+                    {
+                      "fieldName": "end_of_life_pct",
+                      "displayName": "End of Life %"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Lifecycle Phase Breakdown (% of Carbon)"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-section-header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Top 10 Highest Carbon Products"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p3-top-carbon-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_top_carbon_products",
+                  "fields": [
+                    {
+                      "name": "product_name",
+                      "expression": "`product_name`"
+                    },
+                    {
+                      "name": "product_category",
+                      "expression": "`product_category`"
+                    },
+                    {
+                      "name": "carbon_footprint_kg",
+                      "expression": "`carbon_footprint_kg`"
+                    },
+                    {
+                      "name": "energy_kwh",
+                      "expression": "`energy_kwh`"
+                    },
+                    {
+                      "name": "water_liters",
+                      "expression": "`water_liters`"
+                    },
+                    {
+                      "name": "manufacturing_pct",
+                      "expression": "`manufacturing_pct`"
+                    },
+                    {
+                      "name": "renewable_pct",
+                      "expression": "`renewable_pct`"
+                    },
+                    {
+                      "name": "recycled_pct",
+                      "expression": "`recycled_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "product_name",
+                    "displayName": "Product"
+                  },
+                  {
+                    "fieldName": "product_category",
+                    "displayName": "Category"
+                  },
+                  {
+                    "fieldName": "carbon_footprint_kg",
+                    "displayName": "Carbon (kg)"
+                  },
+                  {
+                    "fieldName": "energy_kwh",
+                    "displayName": "Energy (kWh)"
+                  },
+                  {
+                    "fieldName": "water_liters",
+                    "displayName": "Water (L)"
+                  },
+                  {
+                    "fieldName": "manufacturing_pct",
+                    "displayName": "Mfg %"
+                  },
+                  {
+                    "fieldName": "renewable_pct",
+                    "displayName": "Renewable %"
+                  },
+                  {
+                    "fieldName": "recycled_pct",
+                    "displayName": "Recycled %"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 Highest Carbon Products"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "supply_chain_risk",
+      "displayName": "Supply Chain Risk",
+      "layout": [
+        {
+          "widget": {
+            "name": "p4-title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Supply Chain Risk"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-subtitle",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Supplier risk assessment, certification tracking, and supply chain visibility"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-total-suppliers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_supply_counters",
+                  "fields": [
+                    {
+                      "name": "total_suppliers",
+                      "expression": "`total_suppliers`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_suppliers",
+                  "displayName": "Total Suppliers"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Unique Suppliers"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-high-risk-suppliers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_supply_counters",
+                  "fields": [
+                    {
+                      "name": "high_risk_suppliers",
+                      "expression": "`high_risk_suppliers`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "high_risk_suppliers",
+                  "displayName": "High Risk Suppliers"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "High Risk Suppliers"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-expiring-certs",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_supply_counters",
+                  "fields": [
+                    {
+                      "name": "expiring_certifications",
+                      "expression": "`expiring_certifications`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "expiring_certifications",
+                  "displayName": "Expiring Certifications"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Expiring Certifications"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-suppliers-by-tier",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_suppliers_by_tier",
+                  "fields": [
+                    {
+                      "name": "tier",
+                      "expression": "`tier`"
+                    },
+                    {
+                      "name": "supplier_count",
+                      "expression": "`supplier_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "tier",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Supply Chain Tier"
+                },
+                "y": {
+                  "fieldName": "supplier_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Supplier Count"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Suppliers by Tier"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-risk-pie",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_supplier_risk_dist",
+                  "fields": [
+                    {
+                      "name": "risk_level",
+                      "expression": "`risk_level`"
+                    },
+                    {
+                      "name": "supplier_count",
+                      "expression": "`supplier_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "supplier_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Supplier Count"
+                },
+                "color": {
+                  "fieldName": "risk_level",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Risk Level"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Supplier Risk Distribution"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-section-header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### High-Risk Supplier Links"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "p4-high-risk-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_high_risk_suppliers",
+                  "fields": [
+                    {
+                      "name": "supplier_name",
+                      "expression": "`supplier_name`"
+                    },
+                    {
+                      "name": "supplier_country",
+                      "expression": "`supplier_country`"
+                    },
+                    {
+                      "name": "supplier_risk_score",
+                      "expression": "`supplier_risk_score`"
+                    },
+                    {
+                      "name": "product_name",
+                      "expression": "`product_name`"
+                    },
+                    {
+                      "name": "certification",
+                      "expression": "`certification`"
+                    },
+                    {
+                      "name": "certification_expiry",
+                      "expression": "`certification_expiry`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "supplier_name",
+                    "displayName": "Supplier"
+                  },
+                  {
+                    "fieldName": "supplier_country",
+                    "displayName": "Country"
+                  },
+                  {
+                    "fieldName": "supplier_risk_score",
+                    "displayName": "Risk Score"
+                  },
+                  {
+                    "fieldName": "product_name",
+                    "displayName": "Product"
+                  },
+                  {
+                    "fieldName": "certification",
+                    "displayName": "Certification"
+                  },
+                  {
+                    "fieldName": "certification_expiry",
+                    "displayName": "Cert. Expiry"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "High-Risk Supplier Links"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "app_usage",
+      "displayName": "App Usage",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "pU-title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## DPP App Usage\nWho opened the apps (populated when ACCESS_LOG_ENABLED=true)."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pU-total-visits",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_usage_counters",
+                  "fields": [
+                    {
+                      "name": "total_visits",
+                      "expression": "`total_visits`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_visits",
+                  "displayName": "Total visits"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total visits"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "pU-unique-users",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_usage_counters",
+                  "fields": [
+                    {
+                      "name": "unique_users",
+                      "expression": "`unique_users`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "unique_users",
+                  "displayName": "Unique users"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Unique users"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 1,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "pU-by-user",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_usage_by_user",
+                  "fields": [
+                    {
+                      "name": "user_email",
+                      "expression": "`user_email`"
+                    },
+                    {
+                      "name": "visits",
+                      "expression": "`visits`"
+                    },
+                    {
+                      "name": "pages",
+                      "expression": "`pages`"
+                    },
+                    {
+                      "name": "last_seen",
+                      "expression": "`last_seen`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "user_email",
+                    "displayName": "User"
+                  },
+                  {
+                    "fieldName": "visits",
+                    "displayName": "Visits"
+                  },
+                  {
+                    "fieldName": "pages",
+                    "displayName": "Distinct pages"
+                  },
+                  {
+                    "fieldName": "last_seen",
+                    "displayName": "Last seen"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Access by user"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "pU-recent",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_usage_recent",
+                  "fields": [
+                    {
+                      "name": "accessed_at",
+                      "expression": "`accessed_at`"
+                    },
+                    {
+                      "name": "user_email",
+                      "expression": "`user_email`"
+                    },
+                    {
+                      "name": "app_name",
+                      "expression": "`app_name`"
+                    },
+                    {
+                      "name": "method",
+                      "expression": "`method`"
+                    },
+                    {
+                      "name": "path",
+                      "expression": "`path`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "accessed_at",
+                    "displayName": "Time"
+                  },
+                  {
+                    "fieldName": "user_email",
+                    "displayName": "User"
+                  },
+                  {
+                    "fieldName": "app_name",
+                    "displayName": "App"
+                  },
+                  {
+                    "fieldName": "method",
+                    "displayName": "Method"
+                  },
+                  {
+                    "fieldName": "path",
+                    "displayName": "Path"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Recent access"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+{% block title %}{{ passport.product_name }} - Digital Product Passport{% endblock %}
+
+{% block content %}
+{# ── Back link ── #}
+<div class="mb-4">
+    <a href="/" class="inline-flex items-center gap-1 text-sm text-dpp-700 hover:text-dpp-800 font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to catalog
+    </a>
+</div>
+
+{# ── Header ── #}
+<div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="inline-block px-2.5 py-1 rounded text-xs font-medium
+                    {% if passport.product_category == 'Furniture' %}bg-amber-100 text-amber-800
+                    {% elif passport.product_category == 'Textiles' %}bg-blue-100 text-blue-800
+                    {% elif passport.product_category == 'Lighting' %}bg-yellow-100 text-yellow-800
+                    {% elif passport.product_category == 'EV Battery' %}bg-emerald-100 text-emerald-800
+                    {% elif passport.product_category == 'Industrial Battery' %}bg-indigo-100 text-indigo-800
+                    {% elif passport.product_category == 'LMT Battery' %}bg-cyan-100 text-cyan-800
+                    {% elif passport.product_category == 'Portable Battery' %}bg-rose-100 text-rose-800
+                    {% else %}bg-purple-100 text-purple-800{% endif %}">
+                    {{ passport.product_category }}
+                </span>
+                <span class="inline-block px-2.5 py-1 rounded text-xs font-medium status-{{ passport.passport_status }}">
+                    {{ passport.passport_status }}
+                </span>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ passport.product_name }}</h1>
+            <p class="text-sm text-gray-500">
+                {{ passport.product_id }}
+                {% if passport.gtin %} &middot; GTIN {{ passport.gtin }}{% endif %}
+                {% if passport.serial_number %} &middot; S/N {{ passport.serial_number }}{% endif %}
+            </p>
+            <p class="text-sm text-gray-400 mt-1">
+                Manufactured by <strong class="text-gray-600">{{ passport.manufacturer_name }}</strong>
+                {% if passport.production_facility %} at {{ passport.production_facility }}{% endif %}
+                {% if passport.production_date %} &middot; {{ passport.production_date }}{% endif %}
+            </p>
+        </div>
+        <div class="flex-shrink-0 text-center">
+            <img src="/api/qr/{{ passport.passport_id }}" alt="QR Code"
+                 class="w-28 h-28 rounded border border-gray-200">
+            <button onclick="copyPassportLink()" id="copy-btn"
+                    class="mt-2 px-3 py-1 text-xs font-medium text-dpp-700 bg-dpp-50 border border-dpp-200 rounded-lg hover:bg-dpp-100 transition-colors">
+                Copy link
+            </button>
+        </div>
+    </div>
+</div>
+
+{# ── Tab Navigation ── #}
+<div class="flex overflow-x-auto gap-1 mb-6 border-b border-gray-200" id="tabs">
+    <button onclick="showTab('origin')" data-tab="origin"
+            class="tab-btn px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 border-dpp-600 text-dpp-700 bg-white">
+        Origin
+    </button>
+    <button onclick="showTab('materials')" data-tab="materials"
+            class="tab-btn px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        Materials
+    </button>
+    <button onclick="showTab('environment')" data-tab="environment"
+            class="tab-btn px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        Environment
+    </button>
+    <button onclick="showTab('compliance')" data-tab="compliance"
+            class="tab-btn px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        Compliance
+    </button>
+    <button onclick="showTab('circularity')" data-tab="circularity"
+            class="tab-btn px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        Circularity
+    </button>
+    <button onclick="showTab('disposal')" data-tab="disposal"
+            class="tab-btn px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        Disposal
+    </button>
+    <button onclick="showTab('insights')" data-tab="insights"
+            class="tab-btn px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        AI Insights
+    </button>
+</div>
+
+{# ── 1. ORIGIN ── #}
+<div id="tab-origin" class="tab-content">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Supply Chain Origin</h2>
+    {% if origins %}
+    <div class="space-y-3">
+        {% for o in origins %}
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="font-medium text-gray-800">{{ o.component_name }}</p>
+                    <p class="text-sm text-gray-500">
+                        {{ o.supplier_name }} &middot; {{ o.supplier_country }}
+                        &middot; Tier {{ o.supply_chain_tier }}
+                    </p>
+                </div>
+                <span class="inline-block px-2 py-0.5 rounded text-xs font-medium
+                    {% if o.risk_score and o.risk_score >= 7 %}bg-red-100 text-red-700
+                    {% elif o.risk_score and o.risk_score >= 4 %}bg-yellow-100 text-yellow-700
+                    {% else %}bg-green-100 text-green-700{% endif %}">
+                    Risk {{ "%.1f"|format(o.risk_score) if o.risk_score else "N/A" }}
+                </span>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                {% if o.source_country %}
+                <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Source: {{ o.source_country }}</span>
+                {% endif %}
+                {% if o.certification %}
+                <span class="bg-dpp-100 text-dpp-800 px-2 py-0.5 rounded">{{ o.certification }}</span>
+                {% endif %}
+                {% if o.certification_expiry %}
+                <span class="{% if o.certification_expiry.isoformat() < now %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %} px-2 py-0.5 rounded">
+                    Expires {{ o.certification_expiry }}
+                </span>
+                {% endif %}
+            </div>
+            {# Multi-tier upstream supply chain (tier-1 -> tier-N traceability) #}
+            {% if o.supplier_chain %}
+            <div class="mt-3 pt-2 border-t border-gray-100">
+                <p class="text-xs text-gray-400 mb-1">Upstream supply chain</p>
+                <div class="flex flex-wrap items-center gap-1 text-xs">
+                    <span class="bg-dpp-50 text-dpp-800 px-2 py-0.5 rounded font-medium">
+                        {{ o.supplier_name }} · T{{ o.supply_chain_tier }}
+                    </span>
+                    {% for node in o.supplier_chain %}
+                    <span class="text-gray-400">&rarr;</span>
+                    <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                        {{ node.name }} · T{{ node.tier }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No origin data available.</p>
+    {% endif %}
+</div>
+
+{# ── 2. MATERIALS ── #}
+<div id="tab-materials" class="tab-content hidden">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Material Composition</h2>
+    {% if materials %}
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {# Stacked bar chart #}
+        <div class="p-4 border-b border-gray-100">
+            <div class="flex h-8 rounded-lg overflow-hidden">
+                {% set colors = ['bg-emerald-500','bg-sky-500','bg-amber-500','bg-violet-500','bg-rose-500','bg-teal-500','bg-orange-500','bg-indigo-500'] %}
+                {% for m in materials %}
+                <div class="{{ colors[loop.index0 % 8] }} relative group"
+                     style="width: {{ m.percentage_by_weight }}%"
+                     title="{{ m.material_name }}: {{ m.percentage_by_weight }}%">
+                    {% if m.percentage_by_weight > 8 %}
+                    <span class="absolute inset-0 flex items-center justify-center text-white text-xs font-medium">
+                        {{ "%.0f"|format(m.percentage_by_weight) }}%
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                <tr>
+                    <th class="text-left px-4 py-2">Material</th>
+                    <th class="text-left px-4 py-2">Category</th>
+                    <th class="text-right px-4 py-2">Weight %</th>
+                    <th class="text-right px-4 py-2">Recycled %</th>
+                    <th class="text-center px-4 py-2">Flags</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in materials %}
+                <tr class="border-t border-gray-100">
+                    <td class="px-4 py-2.5 font-medium text-gray-800">
+                        <span class="inline-block w-2.5 h-2.5 rounded-full {{ colors[loop.index0 % 8] }} mr-2"></span>
+                        {{ m.material_name }}
+                    </td>
+                    <td class="px-4 py-2.5 text-gray-500">{{ m.material_category or '-' }}</td>
+                    <td class="px-4 py-2.5 text-right text-gray-700">{{ "%.1f"|format(m.percentage_by_weight) }}%</td>
+                    <td class="px-4 py-2.5 text-right text-gray-500">{{ "%.0f"|format(m.recycled_content_pct) if m.recycled_content_pct else '-' }}%</td>
+                    <td class="px-4 py-2.5 text-center">
+                        {% if m.renewable_flag %}
+                        <span class="inline-block px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs mr-1">Renewable</span>
+                        {% endif %}
+                        {% if m.hazardous_flag %}
+                        <span class="inline-block px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs mr-1">Hazardous</span>
+                        {% endif %}
+                        {% if m.svhc_flag %}
+                        <span class="inline-block px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs">SVHC</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No material data available.</p>
+    {% endif %}
+</div>
+
+{# ── 3. ENVIRONMENTAL IMPACT ── #}
+<div id="tab-environment" class="tab-content hidden">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Environmental Impact</h2>
+    {% if impact %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 p-5 text-center">
+            <p class="text-3xl font-bold text-gray-800">{{ "%.1f"|format(impact.carbon_footprint_kg) }}</p>
+            <p class="text-sm text-gray-500 mt-1">kg CO<sub>2</sub>e total</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-5 text-center">
+            <p class="text-3xl font-bold text-gray-800">{{ "%.1f"|format(impact.energy_consumption_kwh) }}</p>
+            <p class="text-sm text-gray-500 mt-1">kWh energy</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-5 text-center">
+            <p class="text-3xl font-bold text-gray-800">{{ "%.0f"|format(impact.water_usage_liters) }}</p>
+            <p class="text-sm text-gray-500 mt-1">liters water</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-gray-200 p-5">
+        <h3 class="text-sm font-semibold text-gray-600 mb-3">Carbon Footprint by Lifecycle Phase</h3>
+        {% set phases = [
+            ('Manufacturing', impact.carbon_manufacturing, 'bg-orange-400'),
+            ('Transport', impact.carbon_transport, 'bg-blue-400'),
+            ('Use Phase', impact.carbon_use_phase, 'bg-emerald-400'),
+            ('End of Life', impact.carbon_end_of_life, 'bg-gray-400'),
+        ] %}
+        {% for label, val, color in phases %}
+        {% set pct = (val / impact.carbon_footprint_kg * 100) if impact.carbon_footprint_kg else 0 %}
+        <div class="flex items-center gap-3 mb-2">
+            <span class="w-24 text-xs text-gray-500 text-right">{{ label }}</span>
+            <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                <div class="{{ color }} h-full rounded-full flex items-center justify-end px-2"
+                     style="width: {{ pct }}%">
+                    {% if pct > 10 %}
+                    <span class="text-white text-xs font-medium">{{ "%.1f"|format(val) }} kg</span>
+                    {% endif %}
+                </div>
+            </div>
+            <span class="w-12 text-xs text-gray-500 text-right">{{ "%.0f"|format(pct) }}%</span>
+        </div>
+        {% endfor %}
+        <p class="text-xs text-gray-400 mt-3">
+            Methodology: {{ impact.lca_methodology or 'Not specified' }}
+            {% if impact.verified_by %} &middot; Verified by {{ impact.verified_by }}{% endif %}
+        </p>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No environmental impact data available.</p>
+    {% endif %}
+</div>
+
+{# ── 4. COMPLIANCE ── #}
+<div id="tab-compliance" class="tab-content hidden">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Regulatory Compliance</h2>
+    {% if compliance %}
+    <div class="space-y-3">
+        {% for c in compliance %}
+        <div class="bg-white rounded-lg border border-gray-200 p-4 flex items-center justify-between">
+            <div>
+                <p class="font-medium text-gray-800">{{ c.regulation_name }}</p>
+                <p class="text-xs text-gray-500">
+                    {{ c.regulation_version or '' }}
+                    {% if c.issuing_body %} &middot; {{ c.issuing_body }}{% endif %}
+                    {% if c.certificate_ref %} &middot; Ref: {{ c.certificate_ref }}{% endif %}
+                </p>
+                {% if c.expiry_date %}
+                <p class="text-xs text-gray-400 mt-1">Valid until {{ c.expiry_date }}</p>
+                {% endif %}
+            </div>
+            <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold
+                {% if c.compliance_status == 'compliant' %}bg-green-100 text-green-700
+                {% elif c.compliance_status == 'pending' %}bg-yellow-100 text-yellow-700
+                {% elif c.compliance_status == 'non_compliant' %}bg-red-100 text-red-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ c.compliance_status | replace('_', ' ') | title }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No compliance records available.</p>
+    {% endif %}
+</div>
+
+{# ── 5. CIRCULARITY ── #}
+<div id="tab-circularity" class="tab-content hidden">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Circularity</h2>
+    {% if circularity %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p class="text-3xl font-bold text-dpp-700">{{ "%.1f"|format(circularity.repairability_score) if circularity.repairability_score else 'N/A' }}</p>
+            <p class="text-xs text-gray-500 mt-1">Repairability<br>(0-10)</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p class="text-3xl font-bold text-gray-800">{{ circularity.durability_years or 'N/A' }}</p>
+            <p class="text-xs text-gray-500 mt-1">Expected<br>Lifetime (yrs)</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p class="text-3xl font-bold text-gray-800">{{ "%.0f"|format(circularity.recyclability_pct) if circularity.recyclability_pct else 'N/A' }}%</p>
+            <p class="text-xs text-gray-500 mt-1">Recyclable</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p class="text-3xl font-bold text-gray-800">{{ "%.0f"|format(circularity.recycled_content_pct) if circularity.recycled_content_pct else 'N/A' }}%</p>
+            <p class="text-xs text-gray-500 mt-1">Recycled Content</p>
+        </div>
+    </div>
+
+    {% if circularity.state_of_health_pct is not none %}
+    <div class="bg-white rounded-lg border border-gray-200 p-5 mb-4">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-700">Battery Health</h3>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-dpp-50 text-dpp-700 border border-dpp-100 font-medium">Dynamic data</span>
+        </div>
+        <div class="flex items-end gap-3">
+            <p class="text-3xl font-bold text-dpp-700">{{ "%.1f"|format(circularity.state_of_health_pct) }}%</p>
+            <p class="text-sm text-gray-500 mb-1">State of Health</p>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-2 mt-2">
+            <div class="bg-dpp-500 h-2 rounded-full" style="width: {{ circularity.state_of_health_pct }}%"></div>
+        </div>
+        <div class="flex flex-wrap gap-x-6 gap-y-1 mt-3 text-xs text-gray-500">
+            {% if circularity.cycle_count is not none %}<span>Charge cycles: <span class="font-medium text-gray-700">{{ circularity.cycle_count }}</span></span>{% endif %}
+            {% if circularity.dynamic_data_updated_at %}<span>Updated: <span class="font-medium text-gray-700">{{ circularity.dynamic_data_updated_at.strftime('%Y-%m-%d') }}</span></span>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg border border-gray-200 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-4">Repair &amp; Reuse</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
+            {# Spare Parts #}
+            <div class="flex items-start gap-3">
+                <span class="shrink-0 w-9 h-9 flex items-center justify-center rounded-full {{ 'bg-green-100 text-green-600' if circularity.spare_parts_available else 'bg-gray-100 text-gray-400' }}">
+                    {% if circularity.spare_parts_available %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    {% else %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    {% endif %}
+                </span>
+                <div>
+                    <p class="font-medium text-gray-700">Spare Parts</p>
+                    <p class="text-xs text-gray-500">
+                        {%- if circularity.spare_parts_available -%}
+                            {%- if circularity.spare_parts_years %}Available for {{ circularity.spare_parts_years }} years{% else %}Available{% endif -%}
+                        {%- else -%}
+                            Not available
+                        {%- endif -%}
+                    </p>
+                </div>
+            </div>
+            {# Refurbishable #}
+            <div class="flex items-start gap-3">
+                <span class="shrink-0 w-9 h-9 flex items-center justify-center rounded-full {{ 'bg-green-100 text-green-600' if circularity.refurbishable else 'bg-gray-100 text-gray-400' }}">
+                    {% if circularity.refurbishable %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    {% else %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    {% endif %}
+                </span>
+                <div>
+                    <p class="font-medium text-gray-700">Refurbishable</p>
+                    <p class="text-xs text-gray-500">{{ 'This product can be refurbished' if circularity.refurbishable else 'Not designed for refurbishment' }}</p>
+                </div>
+            </div>
+            {# Take-Back Program #}
+            <div class="flex items-start gap-3">
+                <span class="shrink-0 w-9 h-9 flex items-center justify-center rounded-full {{ 'bg-green-100 text-green-600' if circularity.take_back_program else 'bg-gray-100 text-gray-400' }}">
+                    {% if circularity.take_back_program %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    {% else %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    {% endif %}
+                </span>
+                <div>
+                    <p class="font-medium text-gray-700">Take-Back Program</p>
+                    <p class="text-xs text-gray-500">{{ 'Manufacturer offers product return' if circularity.take_back_program else 'No take-back program' }}</p>
+                </div>
+            </div>
+            {# Second Life Options #}
+            {% if circularity.second_life_options %}
+            <div class="flex items-start gap-3">
+                <span class="shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-dpp-100 text-dpp-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </span>
+                <div>
+                    <p class="font-medium text-gray-700">Second Life Options</p>
+                    <div class="mt-1.5 flex flex-wrap gap-1.5">
+                        {% for opt in circularity.second_life_options %}
+                        <span class="inline-block px-2.5 py-0.5 rounded-full bg-dpp-50 text-dpp-700 text-xs font-medium border border-dpp-100 capitalize">{{ opt }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No circularity data available.</p>
+    {% endif %}
+</div>
+
+{# ── 6. DISPOSAL ── #}
+<div id="tab-disposal" class="tab-content hidden">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Disposal & Recycling Guidelines</h2>
+    {% if disposal %}
+    <div class="space-y-3">
+        {% for d in disposal %}
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <div class="flex items-start justify-between mb-2">
+                <p class="font-medium text-gray-800">{{ d.component_name }}</p>
+                <div class="flex items-center gap-2">
+                    {% if d.weight_kg %}
+                    <span class="text-xs text-gray-400">{{ "%.1f"|format(d.weight_kg) }} kg</span>
+                    {% endif %}
+                    <span class="inline-block px-2 py-0.5 rounded text-xs font-medium
+                        {% if d.disposal_method == 'recycle' %}bg-green-100 text-green-700
+                        {% elif d.disposal_method == 'compost' %}bg-emerald-100 text-emerald-700
+                        {% elif d.disposal_method == 'hazardous_waste' %}bg-red-100 text-red-700
+                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                        {{ d.disposal_method | replace('_', ' ') | title if d.disposal_method else 'Unspecified' }}
+                    </span>
+                </div>
+            </div>
+            {% if d.disassembly_steps %}
+            <p class="text-sm text-gray-600 mb-1">{{ d.disassembly_steps }}</p>
+            {% endif %}
+            {% if d.special_handling %}
+            <p class="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 mt-2">
+                &#9888; {{ d.special_handling }}
+            </p>
+            {% endif %}
+            {% if d.recycling_code %}
+            <span class="inline-block mt-2 text-xs text-gray-400">Recycling code: {{ d.recycling_code }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No disposal guidelines available.</p>
+    {% endif %}
+</div>
+
+{# ── 7. AI INSIGHTS ── #}
+<div id="tab-insights" class="tab-content hidden">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-700">AI Insights</h2>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-xs text-gray-500">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Powered by Databricks AI
+        </span>
+    </div>
+    <div id="insights-content">
+        <div class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-dpp-600 mb-3"></div>
+            <p class="text-sm text-gray-400">Analyzing passport data...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyPassportLink() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
+    });
+}
+
+function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById('tab-' + name).classList.remove('hidden');
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-dpp-600', 'text-dpp-700', 'bg-white');
+        btn.classList.add('border-transparent', 'text-gray-500');
+    });
+    const active = document.querySelector('[data-tab="' + name + '"]');
+    active.classList.add('border-dpp-600', 'text-dpp-700', 'bg-white');
+    active.classList.remove('border-transparent', 'text-gray-500');
+    if (name === 'insights') {
+        loadInsights('{{ passport.passport_id }}');
+    }
+}
+
+let insightsLoaded = false;
+function loadInsights(passportId) {
+    if (insightsLoaded) return;
+    insightsLoaded = true;
+    const container = document.getElementById('insights-content');
+    fetch('/api/insights/' + passportId)
+        .then(r => r.json())
+        .then(data => {
+            if (data.pending) {
+                container.innerHTML = '<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 flex items-start gap-2">'
+                    + '<svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                    + '<span>' + (data.message || 'AI insights are generated on a schedule and will appear after the next refresh.') + '</span></div>';
+                insightsLoaded = false;
+                return;
+            }
+            if (data.error) {
+                container.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">' + data.error + '</div>';
+                insightsLoaded = false;
+                return;
+            }
+            let html = '';
+
+            /* Data Gaps */
+            if (data.gaps && data.gaps.length > 0) {
+                html += '<div class="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-4">';
+                html += '<h3 class="text-sm font-semibold text-amber-800 mb-3 flex items-center gap-2">';
+                html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+                html += 'Data Gaps</h3>';
+                html += '<ul class="space-y-1.5">';
+                data.gaps.forEach(function(gap) {
+                    html += '<li class="text-sm text-amber-700 flex items-start gap-2">';
+                    html += '<span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>';
+                    html += '<span>' + escapeHtml(gap) + '</span></li>';
+                });
+                html += '</ul></div>';
+            }
+
+            /* Carbon Analysis */
+            if (data.carbon_analysis) {
+                html += '<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-5 mb-4">';
+                html += '<h3 class="text-sm font-semibold text-emerald-800 mb-3 flex items-center gap-2">';
+                html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+                html += 'Carbon Analysis</h3>';
+                html += '<p class="text-sm text-emerald-700 leading-relaxed">' + escapeHtml(data.carbon_analysis) + '</p>';
+                html += '</div>';
+            }
+
+            /* Compliance Alerts */
+            if (data.compliance_alerts && data.compliance_alerts.length > 0) {
+                html += '<div class="bg-red-50 border border-red-200 rounded-lg p-5 mb-4">';
+                html += '<h3 class="text-sm font-semibold text-red-800 mb-3 flex items-center gap-2">';
+                html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+                html += 'Compliance Alerts</h3>';
+                html += '<ul class="space-y-1.5">';
+                data.compliance_alerts.forEach(function(alert) {
+                    html += '<li class="text-sm text-red-700 flex items-start gap-2">';
+                    html += '<span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>';
+                    html += '<span>' + escapeHtml(alert) + '</span></li>';
+                });
+                html += '</ul></div>';
+            }
+
+            /* Circularity Recommendations */
+            if (data.circularity_recommendations && data.circularity_recommendations.length > 0) {
+                html += '<div class="bg-sky-50 border border-sky-200 rounded-lg p-5 mb-4">';
+                html += '<h3 class="text-sm font-semibold text-sky-800 mb-3 flex items-center gap-2">';
+                html += '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+                html += 'Circularity Recommendations</h3>';
+                html += '<ul class="space-y-1.5">';
+                data.circularity_recommendations.forEach(function(rec) {
+                    html += '<li class="text-sm text-sky-700 flex items-start gap-2">';
+                    html += '<span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0"></span>';
+                    html += '<span>' + escapeHtml(rec) + '</span></li>';
+                });
+                html += '</ul></div>';
+            }
+
+            if (!html) {
+                html = '<p class="text-gray-400 text-sm">No insights available for this passport.</p>';
+            }
+
+            container.innerHTML = html;
+        })
+        .catch(function(err) {
+            container.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">Failed to load AI insights. Please try again later.</div>';
+            insightsLoaded = false;
+        });
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
+}
+</script>
+{% endblock %}
