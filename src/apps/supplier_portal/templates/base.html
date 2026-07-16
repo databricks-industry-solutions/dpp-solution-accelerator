@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Supplier Portal{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sp: {
+                            50:  '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .row-hover { transition: all 0.15s ease; }
+        .row-hover:hover { background-color: #eef2ff; }
+        .badge-risk-low { background: #dcfce7; color: #166534; }
+        .badge-risk-med { background: #fef9c3; color: #854d0e; }
+        .badge-risk-high { background: #fee2e2; color: #991b1b; }
+        .flash-success {
+            animation: flash-fade 4s ease-out forwards;
+        }
+        @keyframes flash-fade {
+            0%   { opacity: 1; }
+            75%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2 text-sp-700 font-bold text-lg">
+                <!-- Building / office icon -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                Supplier Portal
+            </a>
+            <span class="text-xs text-gray-400">Powered by Databricks</span>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="border-t border-gray-200 mt-12 py-6 text-center text-xs text-gray-400">
+        {{ brand | default("Demo Manufacturer") }} &mdash; Supplier Management Portal &mdash; Demo / Solution Accelerator
+    </footer>
+</body>
+</html>

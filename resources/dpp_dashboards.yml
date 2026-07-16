@@ -1,0 +1,23 @@
+# AI/BI dashboard -- Module 3
+#
+# The serialized dashboard lives in resources/dashboards/dpp_compliance.lvdash.json.
+# Paths below are relative to THIS file (resources/), matching the ../src/...
+# convention used by the app, job, and pipeline resource files.
+# NOTE: DABs does not substitute ${var.*} inside .lvdash.json files, so the
+# dataset queries are committed against the dev default `dpp_dev.dpp`. If you
+# deploy to another catalog/schema (custom --var, or the staging/prod targets),
+# rewrite them first (run from the repo root), e.g.:
+#   sed -i '' 's/dpp_dev\.dpp\./<catalog>.<schema>./g' resources/dashboards/dpp_compliance.lvdash.json
+# Set dashboard_warehouse_id for your target (see databricks.yml variables).
+#
+# The Genie space is defined in genie/dpp_compliance_explorer.yml (applied via
+# the genie tooling -- not a native DAB resource type yet).
+resources:
+  dashboards:
+    dpp_compliance:
+      display_name: "DPP Compliance & Sustainability"
+      file_path: ./dashboards/dpp_compliance.lvdash.json
+      warehouse_id: ${var.dashboard_warehouse_id}
+      # DABs does not auto-create the default parent folder; pin it to the
+      # bundle's synced files root (which always exists post-upload).
+      parent_path: ${workspace.file_path}

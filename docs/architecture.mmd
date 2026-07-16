@@ -1,0 +1,55 @@
+%% DPP Solution Accelerator -- Architecture
+%% Render: mmdc -i docs/architecture.mmd -o docs/architecture.png -b white
+%%   (npm i -g @mermaid-js/mermaid-cli) or paste into https://mermaid.live
+flowchart LR
+    %% ---------------- Sources ----------------
+    subgraph SRC["Data sources"]
+        SUP["Suppliers<br/>(certificates, material data)"]
+        MFG["Manufacturer systems<br/>(production, LCA)"]
+    end
+
+    %% ---------------- Operational store ----------------
+    subgraph OLTP["Lakebase (PostgreSQL) — operational store"]
+        LB[("dpp schema<br/>12 tables · audit triggers<br/>passport_insights cache")]
+    end
+
+    %% ---------------- Lakehouse / SDP ----------------
+    subgraph UC["Unity Catalog — Spark Declarative Pipeline"]
+        BRONZE["Bronze<br/>Lakebase snapshot ingest"]
+        SILVER["Silver<br/>cleanse · DQ expectations"]
+        GOLD["Gold<br/>passport_complete · supply_chain_lineage<br/>supplier_traceability · carbon aggregates<br/>compliance gaps · material/circularity metrics"]
+    end
+
+    %% ---------------- AI ----------------
+    subgraph AI["AI"]
+        FM["Foundation Model API<br/>(ai_query)"]
+        INS["gold.dpp_passport_insights<br/>(nightly pre-compute)"]
+    end
+
+    %% ---------------- Consumers ----------------
+    subgraph APPS["Databricks Apps & BI"]
+        VIEW["Passport Viewer<br/>(consumer QR lookups)"]
+        PORTAL["Supplier Portal<br/>(self-service writes)"]
+        DASH["AI/BI Dashboard"]
+        GENIE["Genie Space"]
+    end
+
+    REYDEN["Reyden<br/>high-concurrency serving<br/>(optional toggle)"]:::optional
+
+    %% ---------------- Flows ----------------
+    SUP -->|writes| PORTAL
+    PORTAL -->|INSERT/UPDATE| LB
+    MFG --> LB
+    LB -->|JDBC snapshot| BRONZE
+    BRONZE --> SILVER --> GOLD
+    GOLD --> DASH
+    GOLD --> GENIE
+    GOLD --> FM
+    FM --> INS
+    INS -.->|upsert JSON| LB
+    LB -->|sub-second reads| VIEW
+    VIEW -.->|cache miss| FM
+    LB -.->|optional| REYDEN
+    REYDEN -.-> VIEW
+
+    classDef optional stroke-dasharray: 5 5,fill:#f5f5f5,stroke:#999;

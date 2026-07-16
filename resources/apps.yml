@@ -1,0 +1,35 @@
+# Databricks Apps -- deployed as part of the bundle so `databricks bundle deploy`
+# ships the apps end-to-end (uploads source + binds resources). No separate
+# `databricks apps create/deploy --source-code-path` step required.
+#
+# Each app binds the Lakebase database instance as a RESOURCE. Databricks
+# provisions a Postgres role for the app's service principal and auto-injects
+# PGHOST / PGPORT / PGDATABASE / PGUSER into the app environment; the app
+# mints a short-lived OAuth token for the password (see each app's main.py).
+#
+# No manual grant is needed for the demo: the schema DDL grants to PUBLIC.
+# For production, scope least-privilege grants to each app's PGUSER instead
+# (see README "Deployment notes").
+resources:
+  apps:
+    dpp_passport_viewer:
+      name: dpp-passport-viewer
+      description: "DPP Passport Viewer -- consumer-facing product passport app"
+      source_code_path: ../src/apps/passport_viewer
+      resources:
+        - name: lakebase
+          database:
+            instance_name: ${var.lakebase_instance_name}
+            database_name: ${var.lakebase_database}
+            permission: CAN_CONNECT_AND_CREATE
+
+    dpp_supplier_portal:
+      name: dpp-supplier-portal
+      description: "DPP Supplier Portal -- supplier self-service data entry app"
+      source_code_path: ../src/apps/supplier_portal
+      resources:
+        - name: lakebase
+          database:
+            instance_name: ${var.lakebase_instance_name}
+            database_name: ${var.lakebase_database}
+            permission: CAN_CONNECT_AND_CREATE

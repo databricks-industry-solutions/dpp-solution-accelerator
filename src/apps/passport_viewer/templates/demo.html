@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}DPP - How it's built{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <span class="inline-block px-2.5 py-0.5 rounded-full bg-dpp-50 text-dpp-700 border border-dpp-100 text-xs font-medium mb-3">Architecture</span>
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">How the Digital Product Passport is built</h1>
+    <p class="text-gray-500 text-sm max-w-3xl">
+        Explore the data infrastructure powering this accelerator &mdash; from the operational store,
+        through the Bronze &rarr; Silver &rarr; Gold pipeline, to the apps you interact with. The default
+        dataset is a fictional battery maker ({{ brand | default("the manufacturer") }}); the battery
+        passport is the first mandatory EU DPP (18 Feb 2027).
+    </p>
+</div>
+
+{# End-to-end flow #}
+<div class="bg-white rounded-lg border border-gray-200 p-5 mb-10 overflow-x-auto">
+    <div class="flex items-center gap-2 text-xs font-medium text-gray-600 whitespace-nowrap">
+        {% set flow = ["Supplier Portal + synthetic seed", "Lakebase (OLTP)", "Bronze", "Silver", "Gold (Delta)", "Apps · Genie · AI/BI"] %}
+        {% for node in flow %}
+        <span class="px-3 py-1.5 rounded-lg {% if 'Lakebase' in node %}bg-dpp-100 text-dpp-800{% elif 'Gold' in node %}bg-dpp-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">{{ node }}</span>
+        {% if not loop.last %}<span class="text-gray-300">&rarr;</span>{% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+{# Architecture diagram #}
+<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Architecture</h2>
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-10">
+    <a href="/static/architecture.svg" target="_blank" rel="noopener" title="Open full size in a new tab">
+        <img src="/static/architecture.svg" alt="DPP accelerator architecture: Lakebase operational store, Bronze-Silver-Gold pipeline, Unity Catalog governance, Databricks Apps, Genie and AI/BI, Foundation Model API"
+             class="w-full h-auto rounded" loading="lazy">
+    </a>
+    <p class="text-xs text-gray-400 mt-2 text-center">Click to open full size in a new tab.</p>
+</div>
+
+{# Data sources #}
+<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Data sources &mdash; Unity Catalog</h2>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
+    {% set sources = [
+        ("Supplier Portal (operational writes)", "Suppliers submit and renew passport data through the companion app. Every write lands in Lakebase and fires an audit-log trigger — a full change history, no extra code."),
+        ("Synthetic data generator", "A deterministic (seeded) Faker generator produces 500 item-level battery passports and 50 multi-tier suppliers across all six DPP categories, so the accelerator is reproducible on any workspace."),
+        ("Multi-tier supply chain", "supplier.parent_supplier_id models mine → cell → module → pack. Each passport carries tier-1 to tier-N provenance — the question regulators and OEMs actually ask.")
+    ] %}
+    {% for title, body in sources %}
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p class="font-semibold text-gray-800 text-sm mb-1">{{ title }}</p>
+        <p class="text-xs text-gray-500 leading-relaxed">{{ body }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+{# Pipeline stages #}
+<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Pipeline stages &mdash; Bronze &rarr; Silver &rarr; Gold</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Bronze</p>
+        <p class="text-xs text-gray-500 leading-relaxed">Streaming snapshot of the Lakebase tables (<code>bronze_manufacturer</code>, <code>bronze_supplier</code>, <code>bronze_product_passport</code>&hellip;). Append-only, full history via Delta time travel.</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Silver</p>
+        <p class="text-xs text-gray-500 leading-relaxed">Conformance plus data-quality <strong>expectations</strong> (valid country codes, non-null keys, in-range scores). Bad rows are dropped or flagged, not silently kept.</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p class="text-xs font-semibold text-dpp-700 uppercase tracking-wide mb-1">Gold</p>
+        <p class="text-xs text-gray-500 leading-relaxed">Business tables: <code>gold_passport_complete</code>, <code>gold_supply_chain_lineage</code>, <code>gold_carbon_by_category</code>, <code>gold_compliance_gap_analysis</code>, <code>gold_circularity_metrics</code>.</p>
+    </div>
+</div>
+<div class="bg-gray-900 rounded-lg p-4 mb-2 overflow-x-auto">
+    <pre class="text-xs text-gray-100 leading-relaxed"><code>@dlt.table(name="silver_manufacturer",
+           comment="Cleaned manufacturer data with validated fields")
+@dlt.expect_or_drop("valid_manufacturer_id", "manufacturer_id IS NOT NULL")
+@dlt.expect_or_drop("valid_country_code",    "LENGTH(country) = 3")
+@dlt.expect("has_name", "name IS NOT NULL AND LENGTH(TRIM(name)) &gt; 0")
+def silver_manufacturer():
+    return dlt.read_stream("bronze_manufacturer")</code></pre>
+</div>
+<p class="text-xs text-gray-400 mb-10">Declarative Python &mdash; you state what each table should contain and its quality rules; Databricks handles orchestration, lineage, and serverless compute. Pipelines run serverless; Gold can be Delta-Shared to partners without copying a row.</p>
+
+{# Governance #}
+<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Governance &mdash; Unity Catalog</h2>
+<div class="bg-white rounded-lg border border-gray-200 p-5 mb-10">
+    <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex gap-2"><span class="text-dpp-600 shrink-0">&bull;</span><span><strong>Audit trail by trigger:</strong> every insert/update/delete on the operational tables is captured in <code>passport_audit_log</code> automatically.</span></li>
+        <li class="flex gap-2"><span class="text-dpp-600 shrink-0">&bull;</span><span><strong>End-to-end lineage:</strong> one governed catalog spans the operational (Lakebase), analytical (Delta), and AI layers, so you can trace any Gold metric back to source.</span></li>
+        <li class="flex gap-2"><span class="text-dpp-600 shrink-0">&bull;</span><span><strong>Access control:</strong> the demo grants to PUBLIC for simplicity; in production you scope least-privilege grants per app service principal (viewer = read, portal = write).</span></li>
+    </ul>
+</div>
+
+{# Capabilities #}
+<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Databricks platform capabilities</h2>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
+    {% set caps = [
+        ("Lakebase (PostgreSQL)", "Sub-second QR / passport lookups and supplier writes on managed Postgres, with branching and scale-to-zero."),
+        ("Lakeflow Declarative Pipelines", "Serverless Bronze → Silver → Gold with built-in data-quality expectations and auto-lineage."),
+        ("Unity Catalog", "One governed catalog across operational, analytical, and AI assets — lineage, grants, and audit in one place."),
+        ("Databricks Apps", "This consumer Passport Viewer and the Supplier self-service Portal, both bound to Lakebase via the app's service principal."),
+        ("Genie + AI/BI", "Natural-language questions over Gold and a governed compliance / sustainability dashboard."),
+        ("Foundation Model API", "ai_query generates passport insights over Gold; results are cached in Lakebase and served on the AI Insights tab.")
+    ] %}
+    {% for title, body in caps %}
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <p class="font-semibold text-gray-800 text-sm mb-1">{{ title }}</p>
+        <p class="text-xs text-gray-500 leading-relaxed">{{ body }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+{# Key points #}
+<div class="bg-dpp-50 border border-dpp-100 rounded-lg p-5 mb-8">
+    <ul class="space-y-2 text-sm text-gray-700">
+        <li class="flex gap-2"><span class="text-dpp-600 shrink-0">&bull;</span><span>The EU DPP system is <strong>decentralized</strong>: each operator stores and serves its own passport data; the EU registry holds only high-level metadata. Databricks is the <strong>governed data foundation under</strong> any DPP front-end.</span></li>
+        <li class="flex gap-2"><span class="text-dpp-600 shrink-0">&bull;</span><span>The hard part is not storage or the QR code &mdash; it is <strong>sourcing, quality, and governing data across the multi-tier supply chain</strong>.</span></li>
+        <li class="flex gap-2"><span class="text-dpp-600 shrink-0">&bull;</span><span><strong>One domain-agnostic schema, selectable profiles.</strong> Battery is the default; deploy with <code>--var profile=furniture</code> to serve another sector from the same foundation.</span></li>
+    </ul>
+</div>
+
+<div class="text-center">
+    <a href="/" class="inline-block px-6 py-2.5 bg-dpp-600 text-white rounded-lg text-sm font-medium hover:bg-dpp-700 transition-colors">Explore the passports &rarr;</a>
+    <p class="text-xs text-gray-400 mt-4">Powered by Databricks Lakebase &middot; Lakeflow Declarative Pipelines &middot; Unity Catalog &middot; Genie AI/BI &middot; Foundation Model API</p>
+</div>
+{% endblock %}

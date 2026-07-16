@@ -1,0 +1,31 @@
+resources:
+  pipelines:
+    dpp_ingestion_pipeline:
+      name: "DPP Ingestion Pipeline"
+      catalog: "${var.catalog}"
+      target: "${var.schema}"
+      development: true
+      continuous: false
+      channel: "PREVIEW"
+      photon: true
+      configuration:
+        "dpp.lakebase.instance_name": "${var.lakebase_instance_name}"
+        "dpp.lakebase.database": "${var.lakebase_database}"
+      libraries:
+        - file:
+            path: ../src/pipelines/bronze/ingest_lakebase_to_bronze.py
+        - file:
+            path: ../src/pipelines/silver/clean_and_conform.py
+        - file:
+            path: ../src/pipelines/gold/passport_complete.py
+        - file:
+            path: ../src/pipelines/gold/supply_chain_lineage.py
+        - file:
+            path: ../src/pipelines/gold/compliance_gap_analysis.py
+        - file:
+            path: ../src/pipelines/gold/carbon_footprint_aggregates.py
+        - file:
+            path: ../src/pipelines/gold/material_circularity_metrics.py
+        - file:
+            path: ../src/pipelines/gold/app_usage.py
+      serverless: true
