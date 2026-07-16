@@ -344,6 +344,18 @@ applies to you).
 - Toys and detergents come in through their own legislation (e.g. Toys Safety
   Regulation 2025/2509), not the ESPR delegated acts above.
 
+**Regulatory references** (external, authoritative sources — for context only):
+
+- European Commission — [Digital Product Passport overview](https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en)
+- Ecodesign for Sustainable Products Regulation (ESPR) — [Regulation (EU) 2024/1781](https://eur-lex.europa.eu/eli/reg/2024/1781/oj)
+- EU Batteries Regulation — [Regulation (EU) 2023/1542](https://eur-lex.europa.eu/eli/reg/2023/1542/oj)
+
+> This accelerator is an independent Databricks solution accelerator. It is **not
+> affiliated with, endorsed by, or produced in association with** the European
+> Commission or any EU body. Links above are provided as references to the
+> primary regulation and official guidance; always confirm requirements against
+> the acts that apply to you.
+
 ## Target Audience
 
 Any organization that must place an EU Digital Product Passport on the market,
