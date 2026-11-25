@@ -20,10 +20,12 @@ This accelerator is that operator-side backend. See
 architecture, and where this fits.
 
 > **Scope of this accelerator.** v1.0 is a reference architecture and runnable
-> demo, not a turnkey compliance product. In particular it serves passport data
-> openly and does not yet implement the regulation's tiered access rights
-> (public / restricted / authority-only) or DPP Registry registration and the
-> Registry-issued unique identifier. Those are on the [roadmap](ROADMAP.md). The
+> demo, not a turnkey compliance product. It takes a first step towards the
+> regulation's tiered access rights: a column mask, access-tier tags, and
+> tier-scoped Delta Sharing shares built from a contract. The apps still serve
+> passport data openly, and DPP Registry registration and the Registry-issued
+> unique identifier are not implemented; those are on the
+> [roadmap](ROADMAP.md). The
 > economic operator remains responsible for meeting the applicable legal
 > requirements.
 
@@ -213,9 +215,21 @@ The fastest path, matching the standard Solution Accelerator flow:
    > Local alternative: set `LAKEBASE_HOST` / `LAKEBASE_USER` /
    > `LAKEBASE_PASSWORD` and run `python src/foundation/00_setup_lakebase.py`.
 
-6. Run the ingestion pipeline (Bronze / Silver / Gold):
+   The same job also lands **raw supplier material declarations** (JSON-lines
+   files, about 4% of the lines deliberately bad) in the Unity Catalog volume
+   `<catalog>.<schema>.raw_landing`. That is the raw-file start of the journey.
+
+6. Run the ingestion pipeline (Bronze / Silver / Gold). It has two sources:
+   Auto Loader on the raw declaration files, and the Lakebase operational
+   tables. They meet in Gold (`gold_supplier_declaration_coverage`):
    ```bash
    databricks bundle run dpp_ingestion_pipeline -t dev
+   ```
+
+   Then apply the Unity Catalog tiered-access model (column mask on the
+   supplier contact, `dpp_access_tier` tags, read-back in the job log):
+   ```bash
+   databricks bundle run uc_governance -t dev
    ```
 
 7. Start the apps (deploys the source version and starts the app):
@@ -236,8 +250,14 @@ The fastest path, matching the standard Solution Accelerator flow:
    spec. In the workspace UI go to **Genie > New**, attach the Gold/Silver
    tables listed in the spec (with your catalog/schema substituted for
    `${var.catalog}.${var.schema}`), and paste in its description and curated
-   questions — or create it programmatically via the Genie REST API. The
-   dashboard and apps work without it; only the Genie demo scenarios need it.
+   questions — or create it from the spec with the CLI:
+   ```bash
+   databricks workspace mkdirs /Workspace/Users/<you>/genie_spaces
+   python scripts/create_genie_space_payload.py resources/genie/dpp_compliance_explorer.yml \
+       <catalog> <schema> <warehouse-id> /Workspace/Users/<you>/genie_spaces > /tmp/genie.json
+   databricks genie create-space --json @/tmp/genie.json
+   ```
+   The dashboard and apps work without it; only the Genie demo scenarios need it.
 
 ### Deployment notes (verified on a fresh workspace)
 
@@ -276,7 +296,8 @@ dpp-solution-accelerator/
   databricks.yml              DAB root config + variables + targets
   resources/                  DAB resources: pipelines, jobs, apps, dashboards
   src/
-    foundation/               00 setup (schema+generate+seed), 01 DDL, 02 generator, 03 seeder
+    foundation/               00 setup (schema+generate+seed), 01 DDL, 02 generator, 03 seeder, 04 raw declaration files
+    governance/               Unity Catalog tiered access: column mask + tags
     pipelines/                SDP code: bronze / silver / gold + precompute_insights
     serving/                  Reyden toggle (reference pattern)
     apps/
@@ -299,6 +320,66 @@ tier-2. This models the tier-1 → tier-N question regulators and OEMs ask
   (bounded iterative parent walk).
 - **App**: the Passport Viewer's Origin tab renders the upstream chain per
   component via a recursive CTE.
+
+## Supplier data contract
+
+What a supplier has to deliver is written down once, in
+[`contracts/inbound/supplier_material_declaration.v1.json`](contracts/inbound/supplier_material_declaration.v1.json):
+the fields, their types, which are required, the allowed ranges, and what
+happens on a violation (`drop` the record, or keep it and `warn`). Everything
+else is derived from that file:
+
+- the ingestion pipeline reads its file schema, Silver casts and expectations
+  from the contract, and stamps each Silver row with the contract version,
+- a supplier checks a file before sending it, with the same rules and no
+  dependencies beyond Python 3.9:
+
+  ```bash
+  python3 scripts/validate_declarations.py my_declarations.jsonl
+  ```
+
+To change a rule or add a field, edit the contract (and bump its version), not
+the pipeline. To onboard another product group, add another contract file.
+
+## Sharing passports (Delta Sharing)
+
+What leaves the company is also a contract:
+[`contracts/outbound/passport_shares.v1.json`](contracts/outbound/passport_shares.v1.json)
+lists one share per audience and, for every shared object, the exact columns.
+
+| Share | Audience | Draws on tables tagged |
+|---|---|---|
+| `dpp_public_passport` | anyone | `public` |
+| `dpp_restricted_value_chain` | authorities, notified bodies, recyclers, auditors, business customers | `public`, `restricted` |
+
+The job **DPP - Outbound Delta Sharing** creates one explicit-column view per
+object and adds it to the share. It stops before sharing anything if a source
+table is missing, lacks a column, or carries a `dpp_access_tier` tag the share
+is not allowed to draw on, so run **DPP - Unity Catalog Governance** first.
+Internal data (supplier risk scores, supplier contacts) is in no share.
+
+```bash
+databricks bundle run uc_governance -t dev
+databricks bundle run outbound_shares -t dev
+```
+
+The job needs `CREATE SHARE` on the metastore. Shares are metastore-wide; set
+`--var="share_prefix=..."` when several deployments use one metastore.
+
+Recipients are yours to decide, so the job does not create them. Recipients do
+not need Databricks:
+
+```sql
+-- a recipient on Databricks (they send you their sharing identifier)
+CREATE RECIPIENT recycler_co USING ID 'aws:eu-central-1:<uuid>';
+-- any other recipient (gets an activation link, reads with any Delta Sharing client)
+CREATE RECIPIENT market_surveillance_se;
+
+GRANT SELECT ON SHARE dpp_restricted_value_chain TO RECIPIENT recycler_co;
+```
+
+Not in this version: suppliers sharing *to* the manufacturer over Delta Sharing
+(the contract already names it as an on-ramp), and per-recipient row filtering.
 
 ## Production hardening
 

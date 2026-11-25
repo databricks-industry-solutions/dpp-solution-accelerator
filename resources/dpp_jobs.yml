@@ -24,6 +24,10 @@ resources:
               - "${var.lakebase_database}"
               - "--profile"
               - "${var.profile}"
+              - "--catalog"
+              - "${var.catalog}"
+              - "--schema"
+              - "${var.schema}"
           environment_key: dpp_default
 
       environments:
@@ -76,3 +80,59 @@ resources:
         pause_status: "PAUSED"
         quartz_cron_expression: "0 0 2 * * ?"
         timezone_id: "Europe/Stockholm"
+
+    uc_governance:
+      name: "DPP - Unity Catalog Governance"
+      description: >
+        Applies the tiered-access model to the pipeline output: a column mask on
+        the supplier contact, access-tier tags on every table and a data-class tag.
+        Run after the ingestion pipeline. Idempotent.
+      tags:
+        project: dpp-solution-accelerator
+        module: governance
+      tasks:
+        - task_key: apply_uc_governance
+          description: "Column mask + access-tier tags + read-back"
+          spark_python_task:
+            python_file: ../src/governance/apply_uc_governance.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
+              - "--schema"
+              - "${var.schema}"
+          environment_key: dpp_governance
+      environments:
+        - environment_key: dpp_governance
+          spec:
+            client: "1"
+
+    outbound_shares:
+      name: "DPP - Outbound Delta Sharing"
+      description: >
+        Publishes the outbound contract (contracts/outbound/) as Delta Sharing
+        shares: one explicit-column view per shared object, one share per
+        audience. Refuses to share a table whose dpp_access_tier tag is not
+        allowed for that share. Run after the governance job. Idempotent.
+      tags:
+        project: dpp-solution-accelerator
+        module: sharing
+      tasks:
+        - task_key: publish_outbound_shares
+          description: "Views + shares from the outbound contract, with read-back"
+          spark_python_task:
+            python_file: ../src/sharing/publish_outbound_shares.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
+              - "--schema"
+              - "${var.schema}"
+              - "--bundle-files"
+              - "${workspace.file_path}"
+              - "--contract"
+              - "contracts/outbound/passport_shares.v1.json"
+              - "--share-prefix=${var.share_prefix}"
+          environment_key: dpp_sharing
+      environments:
+        - environment_key: dpp_sharing
+          spec:
+            client: "1"

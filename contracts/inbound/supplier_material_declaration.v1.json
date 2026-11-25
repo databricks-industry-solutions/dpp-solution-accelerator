@@ -1,0 +1,97 @@
+{
+  "kind": "DataContract",
+  "id": "dpp.supplier_material_declaration",
+  "version": "1.0.0",
+  "status": "active",
+  "direction": "inbound",
+  "description": "What a supplier delivers as passport evidence: one material declaration per material it supplies. Every supplier on-ramp (file drop, supplier portal, Delta Sharing) lands records of this shape, so the pipeline, the quality rules and the coverage scorecard are the same whichever way the data arrives.",
+  "owner": "Economic operator (the manufacturer placing the product on the market)",
+  "delivery": {
+    "format": "JSON lines, UTF-8, one declaration per line",
+    "on_ramps": ["file_drop", "supplier_portal", "delta_share"],
+    "date_format": "YYYY-MM-DD"
+  },
+  "fields": [
+    {
+      "name": "declaration_id",
+      "type": "string",
+      "description": "The supplier's own identifier for this declaration.",
+      "access_tier": "restricted"
+    },
+    {
+      "name": "supplier_id",
+      "type": "string",
+      "required": true,
+      "on_violation": "drop",
+      "description": "Supplier identifier issued by the manufacturer at onboarding.",
+      "access_tier": "restricted"
+    },
+    {
+      "name": "supplier_name",
+      "type": "string",
+      "normalize": "trim",
+      "description": "Legal name of the supplier.",
+      "access_tier": "restricted"
+    },
+    {
+      "name": "material_name",
+      "type": "string",
+      "description": "Material the declaration covers.",
+      "access_tier": "public"
+    },
+    {
+      "name": "recycled_content_pct",
+      "type": "double",
+      "required": true,
+      "on_violation": "drop",
+      "min": 0,
+      "max": 100,
+      "description": "Share of recycled content by weight, in percent.",
+      "access_tier": "public"
+    },
+    {
+      "name": "carbon_kg_co2e_per_kg",
+      "type": "double",
+      "min": 0,
+      "on_violation": "warn",
+      "description": "Declared carbon footprint, kg CO2e per kg of material.",
+      "access_tier": "public"
+    },
+    {
+      "name": "country_of_origin",
+      "type": "string",
+      "normalize": "upper",
+      "description": "ISO 3166-1 alpha-2 country code.",
+      "access_tier": "public"
+    },
+    {
+      "name": "certificate_number",
+      "type": "string",
+      "required": true,
+      "on_violation": "warn",
+      "description": "Number of the certificate backing the declaration.",
+      "access_tier": "restricted"
+    },
+    {
+      "name": "certificate_valid_until",
+      "type": "date",
+      "description": "Last day the certificate is valid.",
+      "access_tier": "restricted"
+    },
+    {
+      "name": "declared_at",
+      "type": "date",
+      "required": true,
+      "on_violation": "drop",
+      "description": "Day the supplier issued the declaration.",
+      "access_tier": "restricted"
+    },
+    {
+      "name": "submitted_by",
+      "type": "string",
+      "description": "Contact address of the person who submitted the declaration.",
+      "access_tier": "internal",
+      "data_class": "supplier_contact"
+    }
+  ]
+}

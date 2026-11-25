@@ -1,0 +1,102 @@
+{
+  "kind": "DataContract",
+  "id": "dpp.outbound_passport_shares",
+  "version": "1.0.0",
+  "status": "active",
+  "direction": "outbound",
+  "description": "What the manufacturer shares with the outside, per audience, over Delta Sharing. Each object is a view with an explicit column list over a Gold table, so a new Gold column is never shared by accident. A share may only draw on tables whose `dpp_access_tier` tag is allowed for that share.",
+  "shares": [
+    {
+      "name": "dpp_public_passport",
+      "access_tier": "public",
+      "audience": "Anyone: consumers, customers, marketplaces, the public web portal.",
+      "allowed_source_tiers": ["public"],
+      "objects": [
+        {
+          "view": "out_public_passport",
+          "source": "gold_passport_complete",
+          "shared_as": "dpp.passport",
+          "description": "One row per product passport: identity, materials summary, footprint, circularity.",
+          "columns": [
+            "passport_id", "gtin", "serial_number", "product_name", "product_category",
+            "passport_status", "production_date", "country_of_origin", "qr_code_url",
+            "manufacturer_name", "manufacturer_country", "manufacturer_website",
+            "material_count", "renewable_content_pct", "contains_hazardous", "contains_svhc",
+            "carbon_footprint_kg", "lca_methodology",
+            "durability_years", "repairability_score", "spare_parts_available",
+            "refurbishable", "circularity_recycled_pct", "recyclability_pct",
+            "take_back_program", "passport_updated_at"
+          ]
+        },
+        {
+          "view": "out_public_carbon_by_category",
+          "source": "gold_carbon_by_category",
+          "shared_as": "dpp.carbon_by_category",
+          "description": "Carbon footprint per product category.",
+          "columns": ["product_category", "product_count", "avg_carbon_kg", "min_carbon_kg", "max_carbon_kg"]
+        },
+        {
+          "view": "out_public_circularity",
+          "source": "gold_circularity_metrics",
+          "shared_as": "dpp.circularity",
+          "description": "Circularity indicators per product category.",
+          "columns": [
+            "product_category", "product_count", "avg_repairability_score", "avg_durability_years",
+            "avg_recyclability_pct", "avg_recycled_content_pct", "refurbishable_rate_pct",
+            "take_back_rate_pct", "spare_parts_rate_pct", "circularity_index"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dpp_restricted_value_chain",
+      "access_tier": "restricted",
+      "audience": "Parties with a legitimate interest: market-surveillance authorities, notified bodies, recyclers, auditors, business customers who build this product into theirs.",
+      "allowed_source_tiers": ["public", "restricted"],
+      "objects": [
+        {
+          "view": "out_restricted_passport",
+          "source": "gold_passport_complete",
+          "shared_as": "dpp.passport_full",
+          "description": "The full passport, including bill of materials, lifecycle carbon split and compliance detail.",
+          "columns": [
+            "passport_id", "product_id", "gtin", "serial_number", "batch_lot_number", "product_name",
+            "product_category", "passport_status", "production_date", "production_facility",
+            "country_of_origin", "qr_code_url", "is_complete", "manufacturer_name", "manufacturer_country",
+            "material_count", "materials", "renewable_content_pct", "contains_hazardous", "contains_svhc",
+            "carbon_footprint_kg", "carbon_manufacturing", "carbon_transport", "carbon_use_phase",
+            "carbon_end_of_life", "energy_consumption_kwh", "water_usage_liters", "lca_methodology",
+            "lca_verified_by", "lca_needs_verification", "compliance_record_count", "compliant_count",
+            "pending_count", "non_compliant_count", "compliance_details", "durability_years",
+            "repairability_score", "spare_parts_available", "spare_parts_years", "refurbishable",
+            "circularity_recycled_pct", "recyclability_pct", "take_back_program", "second_life_options",
+            "passport_updated_at"
+          ]
+        },
+        {
+          "view": "out_restricted_supply_chain",
+          "source": "gold_supply_chain_lineage",
+          "shared_as": "dpp.supply_chain",
+          "description": "Where each component comes from, by tier, with certification status. Supplier risk scores stay internal.",
+          "columns": [
+            "passport_id", "product_name", "product_category", "supply_chain_tier", "component_name",
+            "source_country", "source_region", "supplier_id", "supplier_name", "supplier_country",
+            "supplier_tier", "certification", "certification_expiry", "certification_expiring_soon",
+            "traceability_proof"
+          ]
+        },
+        {
+          "view": "out_restricted_evidence_coverage",
+          "source": "gold_supplier_declaration_coverage",
+          "shared_as": "dpp.supplier_evidence_coverage",
+          "description": "Per supplier: how much declared evidence backs the passport and whether it is still valid.",
+          "columns": [
+            "supplier_id", "supplier_name", "supplier_country", "supplier_tier", "declarations_received",
+            "materials_declared", "declarations_with_valid_certificate",
+            "avg_declared_recycled_content_pct", "latest_declaration_date", "evidence_status"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -11,9 +11,14 @@ resources:
       configuration:
         "dpp.lakebase.instance_name": "${var.lakebase_instance_name}"
         "dpp.lakebase.database": "${var.lakebase_database}"
+        "dpp.raw.declarations_path": "/Volumes/${var.catalog}/${var.schema}/raw_landing/supplier_declarations"
+        "dpp.bundle.files_path": "${workspace.file_path}"
+        "dpp.contract.supplier_declaration": "contracts/inbound/supplier_material_declaration.v1.json"
       libraries:
         - file:
             path: ../src/pipelines/bronze/ingest_lakebase_to_bronze.py
+        - file:
+            path: ../src/pipelines/bronze/ingest_raw_supplier_declarations.py
         - file:
             path: ../src/pipelines/silver/clean_and_conform.py
         - file:
