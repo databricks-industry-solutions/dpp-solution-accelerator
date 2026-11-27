@@ -38,6 +38,12 @@ variables:
       Workspace-specific -- you MUST set this, e.g.
       `databricks bundle deploy --var="dashboard_warehouse_id=$(databricks warehouses list -o json | jq -r '.[0].id')"`.
     default: REPLACE_WITH_YOUR_WAREHOUSE_ID
+  share_prefix:
+    description: >
+      Optional prefix for the Delta Sharing share names. Shares are
+      metastore-wide, so set this when several deployments use one metastore
+      (e.g. "dev_alice_").
+    default: ""
   prod_sp_name:
     description: Service principal name used by the prod target
     default: dpp-prod-sp

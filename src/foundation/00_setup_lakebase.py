@@ -4,7 +4,8 @@ Digital Product Passport -- Lakebase Setup (schema + generate + seed)
 Single-process setup so it works as ONE Databricks serverless spark_python_task:
   1. apply 01_setup_lakebase_schema.sql (idempotent DDL),
   2. generate synthetic data IN MEMORY for the chosen --profile,
-  3. seed it straight into Lakebase.
+  3. seed it straight into Lakebase,
+  4. land RAW supplier declaration files in a UC volume (when --catalog/--schema are given).
 
 Why one process: serverless job tasks each run on their own compute and do NOT
 share a local filesystem, so the older generate-to-JSON-then-seed-from-JSON
@@ -14,7 +15,7 @@ removes that dependency (and the JSON round-trip entirely).
 Connection + auth resolution is reused from 03_seed_lakebase.get_connection
 (runtime OAuth on Databricks; LAKEBASE_HOST/PASSWORD or DSN for local dev).
 
-Params (from the bundle): --instance --database --profile
+Params (from the bundle): --instance --database --profile --catalog --schema
 """
 
 from __future__ import annotations
@@ -90,6 +91,9 @@ def split_sql(sql: str) -> list[str]:
 def main() -> None:
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("--profile", default=os.environ.get("DPP_PROFILE", "furniture"))
+    # Optional: where to land the RAW supplier declaration files (UC volume).
+    ap.add_argument("--catalog")
+    ap.add_argument("--schema")
     args, _ = ap.parse_known_args()
 
     print("=" * 60)
@@ -147,6 +151,18 @@ def main() -> None:
             await conn.close()
 
     seeder.run_async(_run())
+
+    # 4. Land RAW supplier declaration files in a UC volume (Auto Loader source).
+    if args.catalog and args.schema:
+        from pyspark.sql import SparkSession
+
+        raw = _load("land_raw_declarations", "04_land_raw_declarations.py")
+        declarations = raw.build_declarations(
+            gen.suppliers, gen.materials, generator.REFERENCE_DATE, generator.SEED
+        )
+        print(f"\nLanding {len(declarations)} RAW supplier declarations...")
+        folder = raw.land(SparkSession.builder.getOrCreate(), args.catalog, args.schema, declarations)
+        print(f"RAW landing folder: {folder}")
 
 
 if __name__ == "__main__":

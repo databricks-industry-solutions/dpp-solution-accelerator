@@ -36,6 +36,7 @@ tables:
   - ${var.catalog}.${var.schema}.gold_supplier_traceability
   - ${var.catalog}.${var.schema}.gold_material_composition_trends
   - ${var.catalog}.${var.schema}.gold_circularity_metrics
+  - ${var.catalog}.${var.schema}.gold_supplier_declaration_coverage
   - ${var.catalog}.${var.schema}.silver_product_passport
   - ${var.catalog}.${var.schema}.silver_supplier
 
@@ -51,3 +52,4 @@ sample_questions:
   - "What share of materials is recycled or renewable by category?"
   - "Which product categories have the highest circularity index?"
   - "How many passports are incomplete (missing serial number or facility)?"
+  - "Which suppliers have no valid material declaration on file?"
